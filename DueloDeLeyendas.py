@@ -2,9 +2,11 @@ import pygame
 import random
 import sys
 import textwrap
+import os
 
 # Inicializar Pygame
 pygame.init()
+pygame.mixer.init()
 
 # Definir colores mejorados
 BLANCO = (255, 255, 255)
@@ -26,14 +28,38 @@ pygame.display.set_caption("Leyendas de Latinoamérica: Duelo de Héroes")
 # Definir el reloj para controlar los FPS
 reloj = pygame.time.Clock()
 
-# Cargar imágenes de los personajes (asumiendo que existen)
+# Obtener la ruta de acceso a los archivos dependiendo si está en el directorio temporal o no
+def resource_path(relative_path):
+    """ Obtener la ruta absoluta a un recurso, ya sea desde el archivo ejecutable o desde el directorio de desarrollo """
+    try:
+        # PyInstaller crea una carpeta temporal y coloca el ejecutable allí
+        base_path = sys._MEIPASS
+    except Exception:
+        # Si estamos en el entorno de desarrollo
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, relative_path)
+
+# Cargar imágenes de los personajes
 imagenes = {
-    "Simón Bolívar": pygame.image.load("images/bolivar.jpg"),
-    "Che Guevara": pygame.image.load("images/guevara.jpg"),
-    "Evita Perón": pygame.image.load("images/evita.jpeg"),
-    "Fidel Castro": pygame.image.load("images/castro.jpeg"),
-    "Hermanas Mirabal": pygame.image.load("images/mirabal.jpeg")
+    "Simón Bolívar": pygame.image.load(resource_path("images/bolivar.jpg")),
+    "Che Guevara": pygame.image.load(resource_path("images/guevara.jpg")),
+    "Evita Perón": pygame.image.load(resource_path("images/evita.jpeg")),
+    "Fidel Castro": pygame.image.load(resource_path("images/castro.jpeg")),
+    "Hermanas Mirabal": pygame.image.load(resource_path("images/mirabal.jpeg"))
 }
+
+# Cargar imagen de fondo
+fondo = pygame.image.load(resource_path("images/background.jpg"))
+fondo = pygame.transform.scale(fondo, (ANCHO, ALTO))
+
+# Cargar sonidos
+pygame.mixer.music.load(resource_path("sounds/background_music.mp3"))
+sonido_seleccion = pygame.mixer.Sound(resource_path("sounds/select.wav"))
+sonido_victoria = pygame.mixer.Sound(resource_path("sounds/victory.wav"))
+sonido_derrota = pygame.mixer.Sound(resource_path("sounds/defeat.wav"))
+
+# Iniciar música de fondo
+pygame.mixer.music.play(-1)  # El -1 hace que se repita indefinidamente
 
 # Clase para cada personaje histórico
 class Personaje:
@@ -117,7 +143,7 @@ personajes = [
               ["Fue médico de profesión.", "Participó en revoluciones en varios países.", "Es Símbolo de la contracultura."]),
     Personaje("Evita Perón", "Activismo", 6, 9, 8, imagenes["Evita Perón"], 
               "Primera Dama de Argentina, luchó por los derechos de los trabajadores y las mujeres.",
-              ["Impulsó el voto femenino en Argentina.", "Creó la Fundación Eva Perón.", "Fue defensora de los 'descamisados.'"]),
+              ["Impulsó el voto femenino en Argentina.", "Creó la Fundación Eva Perón.", "Fue defensora de los 'descamisados'."]),
     Personaje("Fidel Castro", "Revolución", 7, 8, 9, imagenes["Fidel Castro"], 
               "Líder revolucionario y ex-presidente de Cuba.",
               ["Lideró la Revolución Cubana.", "Gobernó Cuba por casi 50 años.", "Sobrevivió a numerosos intentos de asesinato."]),
@@ -291,8 +317,6 @@ def mostrar_introduccion_juego():
                 if boton_inicio.collidepoint(evento.pos):
                     esperando = False
 
-
-
 # Lógica principal del juego
 def juego():
     mostrar_introduccion_juego()
@@ -321,6 +345,7 @@ def juego():
                         if personaje.rect.collidepoint(evento.pos) and not personaje.seleccionado:
                             seleccion = personaje
                             personaje.seleccionado = True
+                            sonido_seleccion.play()
                             caracteristica = random.choice(personaje.caracteristicas)
                             mostrar_introduccion(seleccion, caracteristica)
                             resultado = comparar_estadisticas(seleccion, desafio_actual)
@@ -328,6 +353,9 @@ def juego():
                                 puntuacion += 1
                                 seleccion.victorias += 1
                                 seleccion.ganar_experiencia(20)
+                                sonido_victoria.play()
+                            else:
+                                sonido_derrota.play()
                             seleccion_hecha = True
                             break
 
@@ -348,7 +376,8 @@ def juego():
                     personaje.hover = personaje.rect.collidepoint(evento.pos)
                 boton_hover = boton_siguiente_desafio.collidepoint(evento.pos)
 
-        pantalla.fill(CREMA)
+        # Dibujar fondo
+        pantalla.blit(fondo, (0, 0))
 
         # Mostrar desafío actual
         mostrar_desafio(desafio_actual, 50, 50)
@@ -363,8 +392,8 @@ def juego():
 
         # Mostrar puntuación y ronda
         fuente = pygame.font.Font(None, 36)
-        texto_puntuacion = fuente.render(f"Puntuación: {puntuacion}", True, NEGRO)
-        texto_ronda = fuente.render(f"Ronda: {ronda}/{max_rondas}", True, NEGRO)
+        texto_puntuacion = fuente.render(f"Puntuación: {puntuacion}", True, BLANCO)
+        texto_ronda = fuente.render(f"Ronda: {ronda}/{max_rondas}", True, BLANCO)
         pantalla.blit(texto_puntuacion, (20, ALTO - 40))
         pantalla.blit(texto_ronda, (20, ALTO - 80))
 
